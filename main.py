@@ -5,6 +5,12 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton
 import pyqtgraph as pg
 
+def read_sensor_data():
+    if random.random() < 0.1:
+        return None
+
+    return random.gauss(100, 5);
+
 # --- THE CHEF (Background Worker) ---
 class SensorWorker(QThread):
     data_signal = pyqtSignal(float)
@@ -13,24 +19,30 @@ class SensorWorker(QThread):
         super().__init__()
         self.is_running = True
 
+    
     def run(self):
-        print("Sensor started...")
+        print("Sensor started... press Ctrl+C to stop")
         while self.is_running:
             try:
                 #simulate reading a sensor
-                simulated_data = random.gauss(100, 5)
-
-                #emit the signal
-                self.data_signal.emit(simulated_data)
+                simulated_data = read_sensor_data()
+                    
+                if simulated_data is None:
+                    print("[WARNING] Sensor signal lost ... waiting for reconnect.")
+                else:
+                    print(f"incoming data: {simulated_data:.2f}")
+                    #emit the signal
+                    self.data_signal.emit(simulated_data)
 
                 #simulate detector dead time
                 time.sleep(0.1)
 
-            except Exception as e:
-                print(f"DEBUG: Error in thread: {e}")
+            except KeyboardInterrupt:
+                print("\nDashboard stopped by user")
                 break
         print("DEBUG: sensor thread stopped.")
 
+    
     #stop the worker
     def stop(self):
         self.is_running = False
