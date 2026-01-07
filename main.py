@@ -1,3 +1,5 @@
+import csv
+from datetime import datetime
 import sys
 import time
 import random
@@ -117,6 +119,10 @@ class ParticleDashboard(QMainWindow):
         # Connect the "Bell" to a function in the GUI
         self.worker.data_signal.connect(self.update_display)
 
+        #log file
+        self.csv_file = None
+        self.csv_write = None
+
     # Logic functions
 
     def toggle_acquisition(self):
@@ -126,6 +132,16 @@ class ParticleDashboard(QMainWindow):
             self.btn_start.setText("HALT ACQUISITION")
             self.label.setText(">>> ACQUIRING DATA <<<")
             self.label.setStyleSheet("color: #00e5ff; font-size: 24px; font-weight: bold;")
+
+            #create a unique filename based on current time
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"particle_log_{timestamp}.csv"
+
+            self.csv_file = open(filename, mode='w', newline='')
+            self.csv_writer = csv.writer(self.csv_file)
+
+            self.csv_writer.writerow(["Timestamp", "Flux_Value"])
+            print(f"DEBUG: Recording to {filename}")
             self.worker.is_running = True
             self.worker.start()
         else:
@@ -134,6 +150,11 @@ class ParticleDashboard(QMainWindow):
             self.label.setStyleSheet("color: #ecf0f1; font-size: 24px;")
             self.worker.stop()
 
+            if self.csv_file:
+                self.csv_file.close()
+                self.csv_file = None
+                print("DEBUG: File closed safely.")
+
     def update_display(self, val):
         #this function receives the data from signal
         self.data_buffer.append(val)
@@ -141,6 +162,10 @@ class ParticleDashboard(QMainWindow):
             self.data_buffer.pop(0)
 
         self.data_line.setData(self.data_buffer)
+
+        if self.csv_writer:
+            current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+            self.csv_writer.writerow([current_time, val])
 
 # Entry Point
 if __name__ == "__main__":
