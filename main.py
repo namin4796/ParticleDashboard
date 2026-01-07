@@ -54,8 +54,29 @@ class ParticleDashboard(QMainWindow):
 
         # 1. Window Setup
         self.setWindowTitle("Particle Flux Monitor - v1.0")
-        self.resize(800, 600)
+        self.resize(900, 600)
 
+        # --- GLOBAL STYLESHEET ---
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #2b2b2b;
+                }
+            QLabel {
+                color: #0aac00;
+                font-family: "Consolas", "Courier New", monospace;
+                }
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                font-weight: bold;
+                border-radius: 5px;
+                padding: 10px;
+            }
+            QPushButton:checked {
+                background-color: #e74c3c;
+            }
+        """)
+    
         # 2. The Central Layout (The "Container")
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -63,29 +84,29 @@ class ParticleDashboard(QMainWindow):
         self.central_widget.setLayout(self.layout)
 
         # 3. Add a placeholder widget (Just to see something)
-        self.label = QLabel()
+        self.label = QLabel("SYSTEM READY")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label.setStyleSheet("background-color: yellow; color: red; font-size: 60px; font-weight:bold;")
         # Add styles (CSS-like syntax is supported in Qt)
-        self.label.setText("System ready to acquire data")
+        self.label.setStyleSheet("font-size: 24px; margin-bottom: 10px;")
         self.layout.addWidget(self.label)
        
         # plot widget
         self.graph_widget = pg.PlotWidget()
-        self.graph_widget.setBackground('w')
-        self.graph_widget.setTitle("Real-Time Detector Output", color="k", size="15pt")
-        self.graph_widget.setLabel('left', 'Flux Intensity', units='counts/s')
-        self.graph_widget.setLabel('bottom', 'Time Sample')
-        self.graph_widget.showGrid(x=True, y=True)
+        self.graph_widget.setBackground('#1e1e1e')
+        self.graph_widget.setTitle("Real-Time Detector Output", color="#bdc3c7", size="12pt")
+
+        styles = {'color': '#bdc3c7', 'font-size': '12px'}
+        self.graph_widget.setLabel('left', 'Flux Intensity', units='counts/s', **styles)
+        self.graph_widget.setLabel('bottom', 'Time Sample', **styles)
+        self.graph_widget.showGrid(x=True, y=True, alpha=0.3)
 
         self.data_buffer =[]
-        self.data_line = self.graph_widget.plot([], [], pen=pg.mkPen(color='b', width=2))
+        self.data_line = self.graph_widget.plot([], [], pen=pg.mkPen(color='#00e5ff', width=2))
         self.layout.addWidget(self.graph_widget)
 
 
         # Crete a control Button
-        self.btn_start = QPushButton("start acquisition")
-        self.btn_start.setStyleSheet("font-size: 18px; padding: 10px")
+        self.btn_start = QPushButton("INITIALIZE ACQUISITION")
         self.btn_start.setCheckable(True)
         self.btn_start.clicked.connect(self.toggle_acquisition)
         self.layout.addWidget(self.btn_start)
@@ -95,7 +116,6 @@ class ParticleDashboard(QMainWindow):
 
         # Connect the "Bell" to a function in the GUI
         self.worker.data_signal.connect(self.update_display)
-        print("DEBUG: signal connected successfully")
 
     # Logic functions
 
@@ -103,13 +123,15 @@ class ParticleDashboard(QMainWindow):
         #check if button is pressed or released
 
         if self.btn_start.isChecked():
-            self.btn_start.setText("Stop Acquisition")
-            self.label.setText("System acquiring data")
+            self.btn_start.setText("HALT ACQUISITION")
+            self.label.setText(">>> ACQUIRING DATA <<<")
+            self.label.setStyleSheet("color: #00e5ff; font-size: 24px; font-weight: bold;")
             self.worker.is_running = True
             self.worker.start()
         else:
-            self.btn_start.setText("Start Acquisition")
-            self.label.setText("System ready to acquire data")
+            self.btn_start.setText("INITIALIZE ACQUISITION")
+            self.label.setText("SYSTEM READY")
+            self.label.setStyleSheet("color: #ecf0f1; font-size: 24px;")
             self.worker.stop()
 
     def update_display(self, val):
