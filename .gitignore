@@ -1,3 +1,6 @@
 venv/
+#ignore data logs
+*.csv
+
 __pycache__/
 .DS_Store
