@@ -4,7 +4,7 @@ import sys
 import time
 import random
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QSlider)
 import pyqtgraph as pg
 
 import serial
@@ -25,7 +25,15 @@ class SensorWorker(QThread):
         self.is_running = True
         self.port_name = port_name
         self.serial_conn = None
-    
+
+    def send_command(self, command_char):
+        if self.serial_conn and self.serial_conn.is_open:
+            try:
+                self.serial_conn.write(command_char.encode('utf-8'))
+                print(f"DEBUG: Sent command {command_char}")
+            except Exception as e:
+                print(f"Error sending command: {e}")
+
     def run(self):
         print("Sensor started... press Ctrl+C to stop\n")
         print("Attemting to connect to {self.port_name}")
@@ -88,6 +96,7 @@ class ParticleDashboard(QMainWindow):
                 background-color: #e74c3c;
             }
         """)
+
     
         # 2. The Central Layout (The "Container")
         self.central_widget = QWidget()
@@ -102,6 +111,19 @@ class ParticleDashboard(QMainWindow):
         self.label.setStyleSheet("font-size: 24px; margin-bottom: 10px;")
         self.layout.addWidget(self.label)
        
+        #threshold slider
+        self.slider_label = QLabel("Trigger Threshold: 500")
+        self.layout.addWidget(self.slider_label)
+
+        self.threshold_slider = QSlider(Qt.Orientation.Horizontal)
+        self.threshold_slider.setMinimum(0)
+        self.threshold_slider.setMaximum(1023)
+        self.threshold_slider.setValue(500)
+
+        self.threshold_slider.valueChanged.connect(self.update_slider_label)
+        self.layout.addWidget(self.threshold_slider)
+
+        self.led_is_on = False
         # plot widget
         self.graph_widget = pg.PlotWidget()
         self.graph_widget.setBackground('#1e1e1e')
@@ -134,7 +156,7 @@ class ParticleDashboard(QMainWindow):
         self.csv_write = None
 
     # Logic functions
-
+    
     def toggle_acquisition(self):
         #check if button is pressed or released
 
@@ -185,6 +207,26 @@ class ParticleDashboard(QMainWindow):
         if self.csv_writer:
             current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
             self.csv_writer.writerow([current_time, val])
+
+        #control logic
+        if hasattr(self, 'worker') and self.worker.isRunning():
+            threshold = self.threshold_slider.value()
+
+            if val < threshold and not self.led_is_on:
+                self.worker.send_command('H')
+                self.led_is_on = True
+                self.label.setText(">>> ALERT: LOW LIGHT <<<")
+                self.label.setStyleSheet("color: #e74c3c; font-size: 24px; font-weight: bold;")
+
+            elif val >= threshold and self.led_is_on:
+                self.worker.send_command('L')
+                self.led_is_on = False
+                self.label.setText(">>> ACQUIRING DATA <<<")
+                self.label.setStyleSheet("color: #00e5ff; font-size: 24px; font-weight: bold;")
+
+
+    def update_slider_label(self, value):
+        self.slider_label.setText(f"Trigger Threshold: {value}")
 
 # Entry Point
 if __name__ == "__main__":
