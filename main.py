@@ -7,6 +7,7 @@ import random
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QSlider, QCheckBox)
 import pyqtgraph as pg
+import pyqtgraph.exporters
 
 import serial
 import serial.tools.list_ports
@@ -158,11 +159,11 @@ class ParticleDashboard(QMainWindow):
 
         self.smoothing_buffer = deque(maxlen=10)
 
-        # Initialize the Worker
-        #self.worker = SensorWorker()
-
-        # Connect the "Bell" to a function in the GUI
-        #self.worker.data_signal.connect(self.update_display)
+        # save a screenshot button
+        self.btn_screenshot = QPushButton("SAVE SNAP")
+        self.btn_screenshot.setStyleSheet("background-color: #8e44ad; color: white; font-weight: bold")
+        self.btn_screenshot.clicked.connect(self.save_screenshot)
+        self.layout.addWidget(self.btn_screenshot)
 
         #log file
         self.csv_file = None
@@ -258,6 +259,17 @@ class ParticleDashboard(QMainWindow):
 
     def update_slider_label(self, value):
         self.slider_label.setText(f"Trigger Threshold: {value}")
+
+    def save_screenshot(self):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"screenshot_{timestamp}.png"
+        exporter = pg.exporters.ImageExporter(self.graph_widget.plotItem)
+
+        exporter.parameters()['width'] = 1000
+        exporter.export(filename)
+
+        self.label.setText(f"SAVED: {filename}")
+        
 
 # Entry Point
 if __name__ == "__main__":
