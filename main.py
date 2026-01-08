@@ -1,4 +1,5 @@
 import csv
+from collections import deque
 from datetime import datetime
 import sys
 import time
@@ -150,6 +151,13 @@ class ParticleDashboard(QMainWindow):
         self.chk_volts.setStyleSheet("color: #ecf0f1; font-size: 14px;")
         self.layout.addWidget(self.chk_volts)
 
+        #smoothing switch
+        self.chk_smooth = QCheckBox("Enable Signal Smoothing")
+        self.chk_smooth.setStyleSheet("color: #ecf0f1; font-size: 14px;")
+        self.layout.addWidget(self.chk_smooth)
+
+        self.smoothing_buffer = deque(maxlen=10)
+
         # Initialize the Worker
         #self.worker = SensorWorker()
 
@@ -166,7 +174,7 @@ class ParticleDashboard(QMainWindow):
         #check if button is pressed or released
 
         if self.btn_start.isChecked():
-           arduino_port = "/dev/cu.usbmodem14301"
+           arduino_port = "/dev/cu.usbmodem14401"
            self.worker = SensorWorker(arduino_port)
            self.worker.data_signal.connect(self.update_display)
            
@@ -202,12 +210,20 @@ class ParticleDashboard(QMainWindow):
                 print("DEBUG: File closed safely.")
 
     def update_display(self, val):
+        #apply smoothing
+        if self.chk_smooth.isChecked():
+            self.smoothing_buffer.append(val)
+            val_to_plot = sum(self.smoothing_buffer) / len(self.smoothing_buffer)
+        else:
+            val_to_plot = val
+            self.smoothing_buffer.clear()
+
         if self.chk_volts.isChecked():
-            display_val = val * (5.0 / 1023.0)
+            display_val = val_to_plot * (5.0 / 1023.0)
             self.graph_widget.setLabel('left', 'Voltage', units='V')
             self.graph_widget.setYRange(0, 5)
         else:
-            display_val = val
+            display_val = val_to_plot
             self.graph_widget.setLabel('left', 'Raw ADC', units='0-1023')
             self.graph_widget.setYRange(0., 1024.)
 
@@ -227,13 +243,13 @@ class ParticleDashboard(QMainWindow):
         if hasattr(self, 'worker') and self.worker.isRunning():
             threshold = self.threshold_slider.value()
 
-            if val < threshold and not self.led_is_on:
+            if val_to_plot < threshold and not self.led_is_on:
                 self.worker.send_command('H')
                 self.led_is_on = True
                 self.label.setText(">>> ALERT: LOW LIGHT <<<")
                 self.label.setStyleSheet("color: #e74c3c; font-size: 24px; font-weight: bold;")
 
-            elif val >= threshold and self.led_is_on:
+            elif val_to_plot >= threshold and self.led_is_on:
                 self.worker.send_command('L')
                 self.led_is_on = False
                 self.label.setText(">>> ACQUIRING DATA <<<")
