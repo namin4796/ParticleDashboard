@@ -7,6 +7,9 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton
 import pyqtgraph as pg
 
+import serial
+import serial.tools.list_ports
+
 def read_sensor_data():
     if random.random() < 0.1:
         return None
@@ -17,34 +20,41 @@ def read_sensor_data():
 class SensorWorker(QThread):
     data_signal = pyqtSignal(float)
 
-    def __init__(self):
+    def __init__(self, port_name):
         super().__init__()
         self.is_running = True
-
+        self.port_name = port_name
+        self.serial_conn = None
     
     def run(self):
-        print("Sensor started... press Ctrl+C to stop")
-        while self.is_running:
-            try:
-                #simulate reading a sensor
-                simulated_data = read_sensor_data()
-                    
-                if simulated_data is None:
-                    print("[WARNING] Sensor signal lost ... waiting for reconnect.")
-                else:
-                    print(f"incoming data: {simulated_data:.2f}")
-                    #emit the signal
-                    self.data_signal.emit(simulated_data)
+        print("Sensor started... press Ctrl+C to stop\n")
+        print("Attemting to connect to {self.port_name}")
+        try:
+            self.serial_conn = serial.Serial(self.port_name, 9600, timeout=1)
+            time.sleep(2)
 
-                #simulate detector dead time
-                time.sleep(0.1)
+            self.serial_conn.reset_input_buffer()
+        
+            while self.is_running:
+                if self.serial_conn.in_waiting > 0:
+                    #simulate reading a sensor
 
-            except KeyboardInterrupt:
-                print("\nDashboard stopped by user")
-                break
-        print("DEBUG: sensor thread stopped.")
+                    line = self.serial_conn.readline().decode('utf-8').strip() 
 
-    
+                    try:
+                        value = float(line)
+                        self.data_signal.emit(value)
+                    except ValueError:
+                        pass
+
+        except serial.SerialException as e:
+            print(f"Error: Could not open serial port: {e}")
+
+        finally:
+            if self.serial_conn and self.serial_conn.is_open:
+                self.serial_conn.close()
+            print("DEBUG: Serial connection closed")
+
     #stop the worker
     def stop(self):
         self.is_running = False
@@ -95,10 +105,10 @@ class ParticleDashboard(QMainWindow):
         # plot widget
         self.graph_widget = pg.PlotWidget()
         self.graph_widget.setBackground('#1e1e1e')
-        self.graph_widget.setTitle("Real-Time Detector Output", color="#bdc3c7", size="12pt")
+        self.graph_widget.setTitle("LDR Output", color="#bdc3c7", size="12pt")
 
         styles = {'color': '#bdc3c7', 'font-size': '12px'}
-        self.graph_widget.setLabel('left', 'Flux Intensity', units='counts/s', **styles)
+        self.graph_widget.setLabel('left', 'Raw Signal', units='0-1023', **styles)
         self.graph_widget.setLabel('bottom', 'Time Sample', **styles)
         self.graph_widget.showGrid(x=True, y=True, alpha=0.3)
 
@@ -114,10 +124,10 @@ class ParticleDashboard(QMainWindow):
         self.layout.addWidget(self.btn_start)
 
         # Initialize the Worker
-        self.worker = SensorWorker()
+        #self.worker = SensorWorker()
 
         # Connect the "Bell" to a function in the GUI
-        self.worker.data_signal.connect(self.update_display)
+        #self.worker.data_signal.connect(self.update_display)
 
         #log file
         self.csv_file = None
@@ -129,26 +139,35 @@ class ParticleDashboard(QMainWindow):
         #check if button is pressed or released
 
         if self.btn_start.isChecked():
-            self.btn_start.setText("HALT ACQUISITION")
-            self.label.setText(">>> ACQUIRING DATA <<<")
-            self.label.setStyleSheet("color: #00e5ff; font-size: 24px; font-weight: bold;")
+           arduino_port = "/dev/cu.usbmodem14301"
+           self.worker = SensorWorker(arduino_port)
+           self.worker.data_signal.connect(self.update_display)
+           
+           self.btn_start.setText("HALT ACQUISITION")
+           self.label.setText(">>> ACQUIRING DATA <<<")
+           self.label.setStyleSheet("color: #00e5ff; font-size: 24px; font-weight: bold;")
 
-            #create a unique filename based on current time
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"particle_log_{timestamp}.csv"
+           #create a unique filename based on current time
+           timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+           filename = f"particle_log_{timestamp}.csv"
 
-            self.csv_file = open(filename, mode='w', newline='')
-            self.csv_writer = csv.writer(self.csv_file)
+           self.csv_file = open(filename, mode='w', newline='')
+           self.csv_writer = csv.writer(self.csv_file)
 
-            self.csv_writer.writerow(["Timestamp", "Flux_Value"])
-            print(f"DEBUG: Recording to {filename}")
-            self.worker.is_running = True
-            self.worker.start()
+           self.csv_writer.writerow(["Timestamp", "Flux_Value"])
+           print(f"DEBUG: Recording to {filename}")
+           #self.worker.is_running = True
+           self.worker.start()
+
         else:
             self.btn_start.setText("INITIALIZE ACQUISITION")
             self.label.setText("SYSTEM READY")
             self.label.setStyleSheet("color: #ecf0f1; font-size: 24px;")
             self.worker.stop()
+
+            if hasattr(self, 'worker'):
+                self.worker.stop()
+                self.worker.wait()
 
             if self.csv_file:
                 self.csv_file.close()

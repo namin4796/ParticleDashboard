@@ -22,4 +22,10 @@ A multi-threaded data acquisition system built with Python and PyQt6. This appli
 3.  Run the application:
     ```bash
     python main.py
-    ```
+
+## Hardware Setup
+* **Microcontroller:** Arduino Uno (or compatible)
+* **Sensor:** LDR (Light Dependent Resistor) in a voltage divider configuration.
+    * LDR -> 5V
+    * 10kΩ Resistor -> GND
+    * Signal Point -> Pin A0 or any Analog Pin 
