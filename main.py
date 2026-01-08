@@ -4,7 +4,7 @@ import sys
 import time
 import random
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QSlider)
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QSlider, QCheckBox)
 import pyqtgraph as pg
 
 import serial
@@ -139,11 +139,16 @@ class ParticleDashboard(QMainWindow):
         self.layout.addWidget(self.graph_widget)
 
 
-        # Crete a control Button
+        # Create a control Button
         self.btn_start = QPushButton("INITIALIZE ACQUISITION")
         self.btn_start.setCheckable(True)
         self.btn_start.clicked.connect(self.toggle_acquisition)
         self.layout.addWidget(self.btn_start)
+
+        #Mode switch Raw <-> voltage
+        self.chk_volts = QCheckBox("Show as Volts (0-5V)")
+        self.chk_volts.setStyleSheet("color: #ecf0f1; font-size: 14px;")
+        self.layout.addWidget(self.chk_volts)
 
         # Initialize the Worker
         #self.worker = SensorWorker()
@@ -197,8 +202,18 @@ class ParticleDashboard(QMainWindow):
                 print("DEBUG: File closed safely.")
 
     def update_display(self, val):
+        if self.chk_volts.isChecked():
+            display_val = val * (5.0 / 1023.0)
+            self.graph_widget.setLabel('left', 'Voltage', units='V')
+            self.graph_widget.setYRange(0, 5)
+        else:
+            display_val = val
+            self.graph_widget.setLabel('left', 'Raw ADC', units='0-1023')
+            self.graph_widget.setYRange(0., 1024.)
+
+
         #this function receives the data from signal
-        self.data_buffer.append(val)
+        self.data_buffer.append(display_val)
         if len(self.data_buffer) > 100:
             self.data_buffer.pop(0)
 
@@ -206,7 +221,7 @@ class ParticleDashboard(QMainWindow):
 
         if self.csv_writer:
             current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-            self.csv_writer.writerow([current_time, val])
+            self.csv_writer.writerow([current_time, display_val])
 
         #control logic
         if hasattr(self, 'worker') and self.worker.isRunning():
