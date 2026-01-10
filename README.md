@@ -1,31 +1,51 @@
-# Real-Time Particle Flux Dashboard
+# IoT Sensor Dashboard & Control System
 
-A multi-threaded data acquisition system built with Python and PyQt6. This application simulates a particle detector connection, visualizes real-time flux intensity, and logs data to CSV for post-processing.
+## Overview
+This project is a full-stack IoT application that interfaces with an Arduino microcontroller to perform real-time data acquisition, signal processing, and hardware control. It features a bi-directional communication protocol where Python visualizes sensor data and sends control commands back to the hardware based on user-defined thresholds.
 
 ## Features
-* **Multithreading:** Dedicated `QThread` worker for non-blocking sensor acquisition.
-* **Fault Tolerance:** Simulates sensor noise and handles connection drops (null signal) gracefully.
-* **Real-time Visualization:** High-performance plotting using `PyQtGraph`.
-* **Data Persistence:** timestamped CSV logging for session data.
+* **Real-Time Data Acquisition:** Reads 10-bit analog sensor data via Serial (UART) at 9600 baud.
+* **Bi-Directional Control Loop:**
+    * **Input:** Live plotting of sensor values using `pyqtgraph`.
+    * **Output:** Sends control signals ('H'/'L') to Arduino to trigger hardware actuators (LEDs) based on software thresholds.
+* **Digital Signal Processing (DSP):**
+    * **Smoothing:** Implements a Moving Average Filter (Queue-based) to reduce sensor noise.
+    * **Calibration:** Dynamic unit conversion (Raw ADC 0-1023 to Voltage 0-5V).
+* **Data Logging:** Automatically logs time-stamped data to CSV for post-analysis.
+* **Reporting:** Instant graph snapshot export (.png) for data visualization.
 
-## Tech Stack
-* **Language:** Python 3.x
-* **GUI:** PyQt6
-* **Visualization:** PyQtGraph
+## Hardware Requirements
+* Arduino Uno/Nano (or compatible board)
+* Analog Sensor (LDR, Potentiometer, or Thermistor)
+* Output Actuator (LED + 220Ω Resistor)
+* USB Cable
 
-## How to Run
-1.  Clone the repository.
-2.  Install dependencies:
+## Software Prerequisites
+* **Python 3.8+**
+* Required Libraries:
     ```bash
-    pip install PyQt6 pyqtgraph
+    pip install PyQt6 pyqtgraph pyserial
     ```
-3.  Run the application:
-    ```bash
-    python main.py
 
-## Hardware Setup
-* **Microcontroller:** Arduino Uno (or compatible)
-* **Sensor:** LDR (Light Dependent Resistor) in a voltage divider configuration.
-    * LDR -> 5V
-    * 10kΩ Resistor -> GND
-    * Signal Point -> Pin A0 or any Analog Pin 
+## Installation & Usage
+
+1.  **Flash Firmware:**
+    * Open `arduino_firmware.ino` in the Arduino IDE.
+    * Upload to your board.
+
+2.  **Run Dashboard:**
+    * Verify your COM port in `main.py` (e.g., `/dev/cu.usbmodem...` or `COM3`).
+    * Run the application:
+        ```bash
+        python main.py
+        ```
+
+3.  **Controls:**
+    * **Initialize Acquisition:** Opens the serial port and starts plotting.
+    * **Threshold Slider:** Sets the trigger point. If the sensor value drops below this line, the Arduino LED turns ON.
+    * **Smoothing:** Toggles the Moving Average Filter.
+    * **Volts Mode:** Calibrates the display to voltage (0-5V).
+
+## Project Structure
+* `main.py`: Main application entry point (GUI, Logic, Serial Threading).
+* `arduino_firmware.ino`: C++ code for the microcontroller.
