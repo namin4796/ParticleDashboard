@@ -47,5 +47,7 @@ This project is a full-stack IoT application that interfaces with an Arduino mic
     * **Volts Mode:** Calibrates the display to voltage (0-5V).
 
 ## Project Structure
-* `main.py`: Main application entry point (GUI, Logic, Serial Threading).
+* `main.py`: Main application entry point.
+* `worker.py` : Serial Thread Module.
+* `dashboard.py` : GUI, and LOGIC module
 * `arduino_firmware.ino`: C++ code for the microcontroller.
