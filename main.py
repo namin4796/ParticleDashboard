@@ -1,4 +1,5 @@
 import csv
+import sys
 from PyQt6.QtWidgets import QApplication
 from dashboard import ParticleDashboard
 

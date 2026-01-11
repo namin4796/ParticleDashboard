@@ -114,7 +114,7 @@ class ParticleDashboard(QMainWindow):
         #check if button is pressed or released
 
         if self.btn_start.isChecked():
-           arduino_port = "/dev/cu.usbmodem14401"
+           arduino_port = "/dev/cu.usbmodem14301"
            self.worker = SensorWorker(arduino_port)
            self.worker.data_signal.connect(self.update_display)
            
