@@ -51,3 +51,8 @@ This project is a full-stack IoT application that interfaces with an Arduino mic
 * `worker.py` : Serial Thread Module.
 * `dashboard.py` : GUI, and LOGIC module
 * `arduino_firmware.ino`: C++ code for the microcontroller.
+
+## Testing
+To verify the signal processing logic (DSP) without hardware attached:
+```bash
+python -m unittest discover tests
