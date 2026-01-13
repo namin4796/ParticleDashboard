@@ -1,4 +1,6 @@
 # IoT Sensor Dashboard & Control System
+![Language](https://img.shields.io/badge/language-%2B%2B17%20%)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ## Overview
 This project is a full-stack IoT application that interfaces with an Arduino microcontroller to perform real-time data acquisition, signal processing, and hardware control. It features a bi-directional communication protocol where Python visualizes sensor data and sends control commands back to the hardware based on user-defined thresholds.
