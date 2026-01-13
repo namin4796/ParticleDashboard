@@ -1,5 +1,4 @@
 # IoT Sensor Dashboard & Control System
-![Language](https://img.shields.io/badge/language-%2B%2B17%20%)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ## Overview
