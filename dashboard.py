@@ -104,6 +104,11 @@ class ParticleDashboard(QMainWindow):
         self.btn_screenshot.clicked.connect(self.save_screenshot)
         self.layout.addWidget(self.btn_screenshot)
 
+        # save recorded data to csv file
+        self.chk_record = QCheckBox("Record to CSV")
+        self.chk_record.setStyleSheet("color #aaaaaa;")
+        self.layout.addWidget(self.chk_record)
+
         #log file
         self.csv_file = None
         self.csv_write = None
@@ -123,15 +128,17 @@ class ParticleDashboard(QMainWindow):
            self.label.setStyleSheet("color: #00e5ff; font-size: 24px; font-weight: bold;")
 
            #create a unique filename based on current time
-           timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-           filename = f"particle_log_{timestamp}.csv"
+           #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+           #filename = f"particle_log_{timestamp}.csv"
 
-           self.csv_file = open(filename, mode='w', newline='')
-           self.csv_writer = csv.writer(self.csv_file)
+           if self.chk_record.isChecked():
+                self.csv_file = open(filename, mode='w', newline='')
+                self.csv_writer = csv.writer(self.csv_file)
 
-           self.csv_writer.writerow(["Timestamp", "Flux_Value"])
-           print(f"DEBUG: Recording to {filename}")
-           #self.worker.is_running = True
+                self.csv_writer.writerow(["Timestamp", "Flux_Value"])
+                print(f"DEBUG: Recording to {filename}")
+           
+
            self.worker.start()
 
         else:
@@ -144,10 +151,10 @@ class ParticleDashboard(QMainWindow):
                 self.worker.stop()
                 self.worker.wait()
 
-            if self.csv_file:
-                self.csv_file.close()
-                self.csv_file = None
-                print("DEBUG: File closed safely.")
+            #if self.csv_file:
+            #    self.csv_file.close()
+            #    self.csv_file = None
+            #    print("DEBUG: File closed safely.")
 
     def update_display(self, val):
         #apply smoothing
@@ -158,6 +165,7 @@ class ParticleDashboard(QMainWindow):
             val_to_plot = val
             self.smoothing_buffer.clear()
 
+        # convert raw adc to voltage
         if self.chk_volts.isChecked():
             display_val = val_to_plot * (5.0 / 1023.0)
             self.graph_widget.setLabel('left', 'Voltage', units='V')
@@ -166,7 +174,7 @@ class ParticleDashboard(QMainWindow):
             display_val = val_to_plot
             self.graph_widget.setLabel('left', 'Raw ADC', units='0-1023')
             self.graph_widget.setYRange(0., 1024.)
-
+    
 
         #this function receives the data from signal
         self.data_buffer.append(display_val)
