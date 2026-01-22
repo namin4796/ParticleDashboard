@@ -55,3 +55,13 @@ This project is a full-stack IoT application that interfaces with an Arduino mic
 * `dashboard.py` : GUI, and LOGIC module
 * `arduino_firmware.ino`: C++ code for the microcontroller.
 
+## Testing & Simulation
+
+To facilitate development without physical hardware access (and for use in **CI/CD pipelines**), this project includes a hardware simulation layer.
+
+### Hardware Mocking
+Located in `tests/mock_serial.py`, the simulation uses `unittest.mock` to mimic the behavior of the Arduino Serial interface.
+
+* **Synthetic Data Generation:** Generates real-time sine waves with noise to simulate sensor inputs.
+* **Protocol Compliance:** Matches the exact byte-encoding and timing of the physical device.
+* **Purpose:** Allows for full verification of the **Producer-Consumer threading logic** and GUI responsiveness in a purely software environment.
