@@ -128,15 +128,15 @@ class ParticleDashboard(QMainWindow):
            self.label.setStyleSheet("color: #00e5ff; font-size: 24px; font-weight: bold;")
 
            #create a unique filename based on current time
-           #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-           #filename = f"particle_log_{timestamp}.csv"
+           timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+           filename = f"particle_log_{timestamp}.csv"
 
-           if self.chk_record.isChecked():
-                self.csv_file = open(filename, mode='w', newline='')
-                self.csv_write = csv.writer(self.csv_file)
+           #if self.chk_record.isChecked():
+           self.csv_file = open(filename, mode='w', newline='')
+           self.csv_write = csv.writer(self.csv_file)
 
-                self.csv_write.writerow(["Timestamp", "Flux_Value"])
-                print(f"DEBUG: Recording to {filename}")
+           self.csv_write.writerow(["Timestamp", "Flux_Value"])
+           print(f"DEBUG: Recording to {filename}")
            
 
            self.worker.start()
