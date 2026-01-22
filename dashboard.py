@@ -133,9 +133,9 @@ class ParticleDashboard(QMainWindow):
 
            if self.chk_record.isChecked():
                 self.csv_file = open(filename, mode='w', newline='')
-                self.csv_writer = csv.writer(self.csv_file)
+                self.csv_write = csv.writer(self.csv_file)
 
-                self.csv_writer.writerow(["Timestamp", "Flux_Value"])
+                self.csv_write.writerow(["Timestamp", "Flux_Value"])
                 print(f"DEBUG: Recording to {filename}")
            
 
@@ -183,9 +183,9 @@ class ParticleDashboard(QMainWindow):
 
         self.data_line.setData(self.data_buffer)
 
-        if self.csv_writer:
+        if self.csv_write:
             current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-            self.csv_writer.writerow([current_time, display_val])
+            self.csv_write.writerow([current_time, display_val])
 
         #control logic
         if hasattr(self, 'worker') and self.worker.isRunning():
