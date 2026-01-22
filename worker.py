@@ -4,7 +4,7 @@ import time
 from PyQt6.QtCore import QThread, pyqtSignal
 
 class SensorWorker(QThread):
-    data_signal = pyqtSignal(float)
+    data_signal = pyqtSignal(float, float)
 
     def __init__(self, port_name):
         super().__init__()
@@ -26,20 +26,23 @@ class SensorWorker(QThread):
         try:
             self.serial_conn = serial.Serial(self.port_name, 9600, timeout=1)
             time.sleep(2)
-
             self.serial_conn.reset_input_buffer()
         
             while self.is_running:
                 if self.serial_conn.in_waiting > 0:
                     #simulate reading a sensor
-
-                    line = self.serial_conn.readline().decode('utf-8').strip() 
-
                     try:
-                        value = float(line)
-                        self.data_signal.emit(value)
+                        line = self.serial_conn.readline().decode('utf-8').strip() 
+                        if ',' in line:
+                            inputs = line.split(',')
+                            light = float(inputs[0])
+                            pot = float(inputs[1])
+                            self.data_signal.emit(light, pot)
                     except ValueError:
-                        pass
+                            pass
+                else:
+                    #to prevent CPU hogging if empty buffer
+                    time.sleep(0.01)
 
         except serial.SerialException as e:
             print(f"Error: Could not open serial port: {e}")
@@ -52,6 +55,3 @@ class SensorWorker(QThread):
     #stop the worker
     def stop(self):
         self.is_running = False
-
-
-                                                  

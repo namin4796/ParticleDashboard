@@ -129,7 +129,7 @@ class ParticleDashboard(QMainWindow):
 
            #create a unique filename based on current time
            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-           filename = f"particle_log_{timestamp}.csv"
+           filename = f"data/particle_log_{timestamp}.csv"
 
            #if self.chk_record.isChecked():
            self.csv_file = open(filename, mode='w', newline='')
@@ -209,7 +209,7 @@ class ParticleDashboard(QMainWindow):
 
     def save_screenshot(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"screenshot_{timestamp}.png"
+        filename = f"screenshots/screenshot_{timestamp}.png"
         exporter = pg.exporters.ImageExporter(self.graph_widget.plotItem)
 
         exporter.parameters()['width'] = 1000
