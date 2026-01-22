@@ -4,7 +4,7 @@
 ## Overview
 This project is a full-stack IoT application that interfaces with an Arduino microcontroller to perform real-time data acquisition, signal processing, and hardware control. It features a bi-directional communication protocol where Python visualizes sensor data and sends control commands back to the hardware based on user-defined thresholds.
 
-![Dashboard UI](.dashboard.png)
+![Dashboard UI](./dashboard.png)
 
 ## Features
 * **Real-Time Data Acquisition:** Reads 10-bit analog sensor data via Serial (UART) at 9600 baud.
