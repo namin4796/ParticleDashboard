@@ -2,14 +2,19 @@ import serial
 import serial.tools.list_ports
 import time
 from PyQt6.QtCore import QThread, pyqtSignal
+from pysensorflow.core import SensorEngine
 
 class SensorWorker(QThread):
-    data_signal = pyqtSignal(float, float)
+    #emits a dictionary
+    data_signal = pyqtSignal(dict)
 
-    def __init__(self, port_name):
+    def __init__(self, port_name, config_path="config/setup.json"):
         super().__init__()
         self.is_running = True
         self.port_name = port_name
+
+        # initialize engine
+        self.engine = SensorEngine(config_path)
         self.serial_conn = None
 
     def send_command(self, command_char):
@@ -32,12 +37,14 @@ class SensorWorker(QThread):
                 if self.serial_conn.in_waiting > 0:
                     #simulate reading a sensor
                     try:
-                        line = self.serial_conn.readline().decode('utf-8').strip() 
-                        if ',' in line:
-                            inputs = line.split(',')
-                            light = float(inputs[0])
-                            pot = float(inputs[1])
-                            self.data_signal.emit(light, pot)
+                        line = self.serial_conn.readline().decode('utf-8').strip()
+
+                        # Returns: {'ldr': 500, 'pot': 200}
+                        sensor_data = self.engine.parse(line)
+
+                        if sensor_data:
+                            self.data_signal.emit(sensor_data)
+
                     except ValueError:
                             pass
                 else:

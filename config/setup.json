@@ -1,0 +1,22 @@
+{
+    "port": "COM3",
+    "baud_rate": 9600,
+    "sensors": [
+        {
+            "id": "ldr_sensor",
+            "name": "Light Level",
+            "type": "analog",
+            "index": 0,
+            "min": 0,
+            "max": 1023
+        },
+        {
+            "id": "threshold_pot",
+            "name": "Control Knob",
+            "type": "analog",
+            "index": 1,
+            "min": 0,
+            "max": 1023
+        }
+    ]
+}

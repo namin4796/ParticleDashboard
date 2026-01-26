@@ -64,6 +64,12 @@ class ParticleDashboard(QMainWindow):
         self.threshold_slider.valueChanged.connect(self.update_slider_label)
         self.layout.addWidget(self.threshold_slider)
 
+        # this lets the user choose between Manual Mode and Hardware Mode
+        self.chk_hw_sync = QCheckBox("Sync Threshold with Hardware Knob")
+        self.chk_hw_sync.setStyleSheet("color: #f1c40f; font-weight: bold;")
+        self.chk_hw_sync.setChecked(False) # default is manual mode
+        self.layout.addWidget(self.chk_hw_sync)
+
         self.led_is_on = False
         # plot widget
         self.graph_widget = pg.PlotWidget()
@@ -156,13 +162,34 @@ class ParticleDashboard(QMainWindow):
             #    self.csv_file = None
             #    print("DEBUG: File closed safely.")
 
-    def update_display(self, val):
+    def update_display(self, data_dict):
+        """
+        Handles data from PySensorFlow Engine
+        Received data_dict: {'ldr': 500, 'pot': 200}
+        """
+        #get data
+        ldr_val = data_dict.get('ldr_sensor', 0.0)
+        pot_val = data_dict.get('threshold', 500.0)
+
+        #threshold control: manual or synced to hardware
+        if self.chk_hw_sync.isChecked():
+            #hardware mode: knob overrides GUI
+            current_threshold = int(pot_val)
+            #update the visual slider to match the knob
+            self.threshold_slider.blockSignals(True) # prevent feedback loop
+            self.threshold_slider.setValue(current_threshold)
+            self.threshold_slider.blockSignals(False)
+            self.slider_label.setText(f"Trigger Threshold (HW): {current_threshold}")
+        else:
+            #manual mode: GUI slider controls threshold
+            current_threshold = self.threshold_slider.value()
+
         #apply smoothing
         if self.chk_smooth.isChecked():
-            self.smoothing_buffer.append(val)
+            self.smoothing_buffer.append(ldr_val)
             val_to_plot = sum(self.smoothing_buffer) / len(self.smoothing_buffer)
         else:
-            val_to_plot = val
+            val_to_plot = ldr_val
             self.smoothing_buffer.clear()
 
         # convert raw adc to voltage
@@ -188,24 +215,28 @@ class ParticleDashboard(QMainWindow):
             self.csv_write.writerow([current_time, display_val])
 
         #control logic
-        if hasattr(self, 'worker') and self.worker.isRunning():
-            threshold = self.threshold_slider.value()
+        #compare vs software slider or hardware potentiometer
+        #visualize hardware potentiometer on slider
 
-            if val_to_plot < threshold and not self.led_is_on:
+        if hasattr(self, 'worker') and self.worker.isRunning():
+
+            if val_to_plot < current_threshold and not self.led_is_on:
                 self.worker.send_command('H')
                 self.led_is_on = True
-                self.label.setText(">>> ALERT: LOW LIGHT <<<")
+                self.label.setText(f">>> ALERT: {val_to_plot:.0f}  < {current_threshold}")
                 self.label.setStyleSheet("color: #e74c3c; font-size: 24px; font-weight: bold;")
 
-            elif val_to_plot >= threshold and self.led_is_on:
+            elif val_to_plot >= current_threshold and self.led_is_on:
                 self.worker.send_command('L')
                 self.led_is_on = False
-                self.label.setText(">>> ACQUIRING DATA <<<")
+                self.label.setText(">>> MONITORING <<<")
                 self.label.setStyleSheet("color: #00e5ff; font-size: 24px; font-weight: bold;")
 
 
     def update_slider_label(self, value):
-        self.slider_label.setText(f"Trigger Threshold: {value}")
+        #only update in manual mode
+        if not self.chk_hw_sync.isChecked():
+            self.slider_label.setText(f"Trigger Threshold: {value}")
 
     def save_screenshot(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
