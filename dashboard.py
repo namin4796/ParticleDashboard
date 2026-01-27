@@ -89,6 +89,7 @@ class ParticleDashboard(QMainWindow):
         #storing plot items in dictionary
         self.buffers = {}
         self.curves = {}
+        self.smoothing_buffers = {}
 
 
         #define a palette of colors for various sensors
@@ -159,6 +160,17 @@ class ParticleDashboard(QMainWindow):
             with open(path, 'r') as f:
                config = json.load(f)
                self.sensor_config = config.get('sensors', [])
+
+               #to read the role of each component
+               self.primary_id = None
+               self.threshold_id = None
+
+               for s in self.sensor_config:
+                   if s.get('role') == 'primary':
+                       self.primary_id = s['id']
+                   elif s.get('role') == 'threshold':
+                       self.threshold_id = s['id']
+
         except Exception as e:
             print(f"Error loading config: {e}")
             self.sensor_config = []
@@ -167,7 +179,7 @@ class ParticleDashboard(QMainWindow):
     
     def toggle_acquisition(self):
 
-        #if self.chk_record.isChecked():
+        
 
         #check if button is pressed or released 
         if self.btn_start.isChecked():
@@ -178,7 +190,12 @@ class ParticleDashboard(QMainWindow):
                 try:
                     self.csv_file = open(self.filename, mode='w', newline='')
                     self.csv_write = csv.writer(self.csv_file)
-                    self.csv_write.writerow(["Timestamp", "Flux_Value"])
+                    header = ["Time"]
+
+                    for sensor in self.sensor_config:
+                        header.append(sensor.get('name', sensor['id']))
+
+                    self.csv_write.writerow(header)
                     print(f"Started recording to: {self.filename}")
                 except Exception as e:
                     print(f"Error creating file: {e}")
@@ -234,24 +251,51 @@ class ParticleDashboard(QMainWindow):
         Handles data from PySensorFlow Engine
         Iterates through whatever data comes in and updates the matching plot.
         """
+        processed_values = {}
 
-        # dynamic plotting loop
-        for s_id, value in data_dict.items():
+        for sensor in self.sensor_config:
+            s_id = sensor['id']
+            raw_val = data_dict.get(s_id, 0.0)
+
+            # config-driven smoothing 
+            if self.chk_smooth.isChecked() and sensor.get('smooth', False):
+                if s_id not in self.smoothing_buffers:
+                    self.smoothing_buffers[s_id] = deque(maxlen=10)
+
+                self.smoothing_buffers[s_id].append(raw_val)
+                final_val = sum(self.smoothing_buffers[s_id]) / len(self.smoothing_buffers[s_id])
+            else:
+                #clear buffer
+                if s_id in self.smoothing_buffers:
+                    self.smoothing_buffers[s_id].clear()
+                final_val = raw_val
+
+            # convert raw adc to voltage
+            if self.chk_volts.isChecked() and sensor.get('convert_volts', False):
+                final_val = final_val * (5.0 / 1023.0)
+                self.graph_widget.setLabel('left', 'Voltage', units='V')
+                self.graph_widget.setYRange(0, 5)
+            else:
+                final_val = final_val * 1.0
+                self.graph_widget.setLabel('left', 'Raw ADC', units='0-1023')
+                self.graph_widget.setYRange(0., 1024.)
+
+            processed_values[s_id] = final_val
+
             if s_id in self.curves:
                 #add to specific buffer
-                self.buffers[s_id].append(value)
+                self.buffers[s_id].append(final_val)
                 #update specific curves
                 self.curves[s_id].setData(self.buffers[s_id])
 
         #get data
-        ldr_val = data_dict.get('ldr_sensor', 0.0)
-        pot_val = data_dict.get('threshold', 500.0)
-        temp_val = data_dict.get('temp_sensor', 300.0)
+        primary_val = processed_values.get(self.primary_id, 0.0)
+        threshold_val = processed_values.get(self.threshold_id, 500.0)
 
         #threshold control: manual or synced to hardware
-        if self.chk_hw_sync.isChecked():
+        if self.chk_hw_sync.isChecked() and self.threshold_id:
             #hardware mode: knob overrides GUI
-            current_threshold = int(pot_val)
+            current_threshold = int(threshold_val)
             #update the visual slider to match the knob
             self.threshold_slider.blockSignals(True) # prevent feedback loop
             self.threshold_slider.setValue(current_threshold)
@@ -261,46 +305,29 @@ class ParticleDashboard(QMainWindow):
             #manual mode: GUI slider controls threshold
             current_threshold = self.threshold_slider.value()
 
-        #apply smoothing
-        if self.chk_smooth.isChecked():
-            self.smoothing_buffer.append(ldr_val)
-            self.smoothing_buffer_temp.append(temp_val)
-            val_to_plot = sum(self.smoothing_buffer) / len(self.smoothing_buffer)
-        else:
-            val_to_plot = ldr_val
-            self.smoothing_buffer.clear()
-
-        # convert raw adc to voltage
-        if self.chk_volts.isChecked():
-            display_val = val_to_plot * (5.0 / 1023.0)
-            self.graph_widget.setLabel('left', 'Voltage', units='V')
-            self.graph_widget.setYRange(0, 5)
-        else:
-            display_val = val_to_plot
-            self.graph_widget.setLabel('left', 'Raw ADC', units='0-1023')
-            self.graph_widget.setYRange(0., 1024.)
-    
-        if self.csv_write and self.csv_file and not self.csv_file.closed:
-            current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-            self.csv_write.writerow([current_time, display_val])
-
         #control logic
         #compare vs software slider or hardware potentiometer
         #visualize hardware potentiometer on slider
 
         if hasattr(self, 'worker') and self.worker.isRunning():
+            if self.primary_id:
+                if primary_val < current_threshold and not self.led_is_on:
+                    self.worker.send_command('H')
+                    self.led_is_on = True
+                    self.label.setText(f">>> ALERT: {primary_val:.1f}  < {current_threshold}")
+                    self.label.setStyleSheet("color: #e74c3c; font-size: 24px; font-weight: bold;")
 
-            if val_to_plot < current_threshold and not self.led_is_on:
-                self.worker.send_command('H')
-                self.led_is_on = True
-                self.label.setText(f">>> ALERT: {val_to_plot:.0f}  < {current_threshold}")
-                self.label.setStyleSheet("color: #e74c3c; font-size: 24px; font-weight: bold;")
-
-            elif val_to_plot >= current_threshold and self.led_is_on:
-                self.worker.send_command('L')
-                self.led_is_on = False
-                self.label.setText(">>> MONITORING <<<")
-                self.label.setStyleSheet("color: #00e5ff; font-size: 24px; font-weight: bold;")
+                elif primary_val >= current_threshold and self.led_is_on:
+                    self.worker.send_command('L')
+                    self.led_is_on = False
+                    self.label.setText(">>> MONITORING <<<")
+                    self.label.setStyleSheet("color: #00e5ff; font-size: 24px; font-weight: bold;")
+       
+        # csv logging
+        if self.csv_write and self.csv_file and not self.csv_file.closed:
+            current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+            row = [current_time] + [processed_values.get(s['id'], 0) for s in self.sensor_config]
+            self.csv_write.writerow(row)
 
 
     def update_slider_label(self, value):
