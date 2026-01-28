@@ -42,10 +42,13 @@ def create_mock_serial():
         light = 500 + 200*math.sin(t*2.0) + random.uniform(-10, 10)
 
         # potentiometer = slow sine wave
-        pot = 500 + 300*math.sin(t*0.5)
+        pot = 500 + 500*math.sin(t*0.5)
+        
+        # temperatute = random temp fluctuations
+        temp = 300 + t*random.uniform(-10, 10)
 
         # return inputs like arduino
-        data_str = f"{light:.2f},{pot:.2f}\n"
+        data_str = f"{light:.2f},{pot:.2f},{temp:.2f}\n"
 
         time.sleep(0.05)
 
