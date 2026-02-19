@@ -53,3 +53,16 @@ def test_parse_partial_data(engine):
     assert result['ldr_sensor'] == 512.0
     assert result['threshold_pot'] == 256.0
     assert result['temp_sensor'] == 0.0
+
+def test_parse_empty_fields(engine):
+    """
+    Test how the parser handles empty values between commas (e.g. loose wire)
+    """
+    raw_serial_line = "512,,128"
+    result = engine.parse(raw_serial_line)
+
+    # the engine must process the valid float and ingore and set the empty string to 0.0
+    assert result['ldr_sensor'] == 512.0
+    assert result['threshold_pot'] == 0.0
+    assert result['temp_sensor'] == 128.0
+    
