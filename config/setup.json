@@ -1,5 +1,5 @@
 {
-    "port": "COM3",
+    "port": "/dev/cu.usbmodem14201",
     "baud_rate": 9600,
     "sensors": [
         {
