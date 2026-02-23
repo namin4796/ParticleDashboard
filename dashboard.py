@@ -79,7 +79,7 @@ class ParticleDashboard(QMainWindow):
         self.graph_widget.setBackground('#1e1e1e')
         self.graph_widget.setTitle("Real-Time Sensor Data", color="#bdc3c7", size="12pt")
         styles = {'color': '#bdc3c7', 'font-size': '12px'}
-        self.graph_widget.setLabel('left', 'Raw Signal', units='0-1023', **styles)
+        self.graph_widget.setLabel('left', 'Raw Signal (0-1023)', **styles)
         self.graph_widget.setLabel('bottom', 'Time Sample', **styles)
         self.graph_widget.showGrid(x=True, y=True, alpha=0.3)
         self.graph_widget.addLegend()
@@ -203,7 +203,7 @@ class ParticleDashboard(QMainWindow):
                 self.csv_file = None
                 self.csv_write = None
                 
-            arduino_port = "/dev/cu.usbmodem14301"
+            arduino_port = "/dev/cu.usbmodem14201"
             self.worker = SensorWorker(arduino_port, config_path="config/setup.json")
             self.worker.data_signal.connect(self.update_display)
             
@@ -277,7 +277,7 @@ class ParticleDashboard(QMainWindow):
                 self.graph_widget.setYRange(0, 5)
             else:
                 final_val = final_val * 1.0
-                self.graph_widget.setLabel('left', 'Raw ADC', units='0-1023')
+                self.graph_widget.setLabel('left', 'Raw ADC (0-1023)')
                 self.graph_widget.setYRange(0., 1024.)
 
             processed_values[s_id] = final_val
