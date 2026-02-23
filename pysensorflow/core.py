@@ -18,9 +18,9 @@ class SensorEngine:
 
     def parse(self, csv_line):
         """
-        Takes raw string "500, 200" and returns dict {'ldr': 500, 'pot': 200}
+        Takes raw string "500, 200" or "500" and returns dict {'ldr': 500, 'pot': 200}
         """
-        if not csv_line or ',' not in csv_line:
+        if not csv_line:
             return None
 
         raw_values = csv_line.split(',')
