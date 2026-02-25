@@ -30,7 +30,10 @@ def test_parse_invalid_string(engine):
     raw_serial_line = "Garbage_data"
     result = engine.parse(raw_serial_line)
 
-    assert result is None
+    assert result is not None
+    assert result['ldr_sensor'] == 0.0
+    assert result['threshold_pot'] == 0.0
+    assert result['temp_sensor'] == 0.0
 
 def test_parse_empty_string(engine):
     """
